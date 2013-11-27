@@ -29,13 +29,13 @@
 #
 ##############################################################################
 
-import csv
+import csv, sys
 
 
 ### CONSTANTS ###
 
 # name of plink data set
-DATA = 'testData/oddsRatioSet'
+#DATA = 'testData/oddsRatioSet'
 
 # some file extensions
 ARFF = '.arff'
@@ -55,6 +55,20 @@ DATA_STRING = "@data\n"
 
 ### FUNCTIONS ###
 
+def get_filename():
+    """ checks command line arguments and returns name of
+    PLINK bim file which is to be converted
+    if supplied or defualt file if not """
+
+    if len(sys.argv) != 2:
+        print "please provide a dataset name. Usage:"
+        print "python plink2weka.py <dateset>"
+        print "e.g. if you have schizophrenia.ped and schizophrenia.map"
+        print "type python plink2weka.py schizophrenia" 
+        sys.exit()
+    else:
+        return sys.argv[1]
+
 def build_features(map_file):
     """ Create and return a dictionary, contianing each SNP in the plink data
     set.  Keys are the SNP name, the values are an empty set.
@@ -69,14 +83,23 @@ def build_features(map_file):
     
     for line in map_file:
         currSNP = line.split()[1]
-        feature_dict[currSNP] = set()
+        feature_dict[currSNP] = set(['00'])
         snp_list.append(currSNP)
         
     return feature_dict, snp_list
 
      
 def write_exemplars(ped_file, features, exemplars, snp_list):
-    """ COMMENTS  """
+    """ Creates and writes to the file .exemplar, where each line on the file
+    is an individual, made up of attributes, where each attribute is
+    the genotype of that individual at a particular SNP.  Also builds up
+    the features dictionary, where the key is a set of possible genotypes.
+
+    ped_file -- the ped file object, which contains genotype data
+    features -- the dictionary of SNPs and genotype sets
+    exemplars -- file object for the exmplar file.
+    snp_list -- ordered list of SNPs
+    """
 
     writer = csv.writer(exemplars, delimiter = ',')
 
@@ -122,13 +145,22 @@ def printable_attributes(genotype_set):
     return out[:-1]
 
 
-def write_arff_file(features, snp_list, arff):
-    """ comment here """
+def write_arff_file(features, snp_list, arff, data):
+    """ Writes the arff file in the format requried by weka. First creates
+    the header section, which lists the attributes, and then writes the
+    data section, which is reproduced from the exemplar file, created
+    earlier in the program.
+
+    data -- the name of the dataset, used to correctly name the arff file
+    features -- the dictionary of SNPs and genotype sets
+    snp_list -- ordered list of SNPs
+    arff - arff file object, for writing the file
+    """
 
     ## WRITE HEADER SECTION ## 
 
     # relation
-    arff.write(RELATION.format(DATA))
+    arff.write(RELATION.format(data))
 
     # attributes
     for snp in snp_list:
@@ -140,7 +172,7 @@ def write_arff_file(features, snp_list, arff):
     arff.write(DATA_STRING)
 
     ## WRITE DATA SECTION ##
-    exemplars = open(DATA + EXEMPLARS)
+    exemplars = open(data + EXEMPLARS)
     for line in exemplars:
         arff.write(line)
 
@@ -153,10 +185,11 @@ def main():
     """ Open up files and run the program! """
     
     # open up the data files
-    ped_file = open(DATA + PED)
-    map_file = open(DATA + MAP)
-    arff = open(DATA + ARFF, "w")
-    exemplars = open(DATA + EXEMPLARS,"w")
+    data = get_filename()
+    ped_file = open(data + PED)
+    map_file = open(data + MAP)
+    arff = open(data + ARFF, "w")
+    exemplars = open(data + EXEMPLARS,"w")
 
     # build feature dictionary and snp_list
     features,snp_list = build_features(map_file)
@@ -165,6 +198,6 @@ def main():
     write_exemplars(ped_file, features, exemplars, snp_list)
     
     # create the arff file
-    write_arff_file(features, snp_list, arff)
+    write_arff_file(features, snp_list, arff, data)
     
 main()
