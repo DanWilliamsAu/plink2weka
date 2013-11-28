@@ -29,7 +29,7 @@
 #
 ##############################################################################
 
-import csv, sys
+import csv, sys, argparse
 
 
 ### CONSTANTS ###
@@ -50,7 +50,25 @@ ATTRIBUTE = "@attribute {0} {{{1}}}\n"
 RELATION = "@relation '{}'\n"
 DATA_STRING = "@data\n"
 
+# argparse strings
+DATASET_HELP =
+"name of plink dataset that you wish to convert to weka arff file"
+VALIDATE_SET_HELP =
+"use if you have a second plink dataset and you want to create \
+an arff consistent with dataset"
+
+
 ### FUNCTIONS ###
+
+def process_commands():
+    """ Build the command line argument parser and use it
+    to return the parsed arguments from the command line.
+
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument("dataset", help=DATASET_HELP)
+    parser.add_argument("--validate", help=VALIDATE_SET_HELP, type=str)
+    return parser.parse_args()
 
 def get_filename():
     """ checks command line arguments and returns name of
@@ -119,7 +137,6 @@ def write_exemplars(ped_file, features, exemplars, snp_list):
             currSNP = currLine[i]+currLine[i+1]
             outline.append(currSNP)
             features[snp_list[j]].add(currSNP)
-
             i += 2; j += 1
 
         # assert the current line has the correct number of SNPs
@@ -132,6 +149,7 @@ def write_exemplars(ped_file, features, exemplars, snp_list):
         writer.writerow(outline)
      
     exemplars.close()
+    return features
 
     
 def printable_attributes(genotype_set):
@@ -157,7 +175,6 @@ def write_arff_file(features, snp_list, arff, data):
     """
 
     ## WRITE HEADER SECTION ## 
-
     # relation
     arff.write(RELATION.format(data))
 
@@ -178,25 +195,36 @@ def write_arff_file(features, snp_list, arff, data):
     exemplars.close()
     arff.close()
     
-
+def initialise_files(dataset_name):
+    """ returns the file objects needed for the program """
+    ped_file = open(dataset_name + PED)
+    map_file = open(dataset_name + MAP)
+    arff = open(dataset_name + ARFF, "w")
+    exemplars = open(dataset_name + EXEMPLARS,"w")
+    return (ped_file, map_file, arff, exemplars)
     
 def main():
     """ Open up files and run the program! """
     
     # open up the data files
-    data = get_filename()
-    ped_file = open(data + PED)
-    map_file = open(data + MAP)
-    arff = open(data + ARFF, "w")
-    exemplars = open(data + EXEMPLARS,"w")
+    args = process_commands()
+    data = args.dataset
+    ped_file, map_file, arff, exemplars = initialise_files(data)
+    if args.validate:
+        validate_data = args.validate
+        vped_file, vmap_file, varff, vexemplars = initialise_files(validate_data)
 
     # build feature dictionary and snp_list
     features,snp_list = build_features(map_file)
 
-    # write the examplars file
-    write_exemplars(ped_file, features, exemplars, snp_list)
-    
+    # write the examplars file(s)
+    features = write_exemplars(ped_file, features, exemplars, snp_list)
+    if args.validate:
+        features = write_exemplars(vped_file, features, vexemplars, snp_list)
+        
     # create the arff file
     write_arff_file(features, snp_list, arff, data)
+    if args.validate:
+        write_arff_file(features, snp_list, varff, validate_data)
     
 main()
