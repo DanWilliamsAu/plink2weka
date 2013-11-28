@@ -34,9 +34,6 @@ import csv, sys
 
 ### CONSTANTS ###
 
-# name of plink data set
-#DATA = 'testData/oddsRatioSet'
-
 # some file extensions
 ARFF = '.arff'
 MAP = '.map'
@@ -74,7 +71,9 @@ def build_features(map_file):
     set.  Keys are the SNP name, the values are an empty set.
     Value Set will be expanded throughout course of program. 
 
-    Also returns an ordered list of SNPs. Order is required for processing ped file.
+    Also returns an ordered list of SNPs. Order is required for processing
+    ped file.
+    
     --map_file: the plink map data file
 
     """
