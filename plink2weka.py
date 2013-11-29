@@ -38,7 +38,7 @@ import csv, sys, argparse
 ARFF = '.arff'
 MAP = '.map'
 PED = '.ped'
-EXEMPLARS = '.exemplars'
+examplarS = '.examplars'
 
 # affection status (plink defaults)
 UNAFFECTED = '1'
@@ -112,20 +112,20 @@ def build_features(map_file):
     return feature_dict, snp_list
 
      
-def write_exemplars(ped_file, features, exemplars, snp_list):
-    """ Creates and writes to the file .exemplar, where each line on the file
+def write_examplars(ped_file, features, examplars, snp_list):
+    """ Creates and writes to the file .examplar, where each line on the file
     is an individual, made up of attributes, where each attribute is
     the genotype of that individual at a particular SNP.  Also builds up
     the features dictionary, where the key is a set of possible genotypes.
 
     ped_file -- the ped file object, which contains genotype data
     features -- the dictionary of SNPs and genotype sets
-    exemplars -- file object for the exmplar file.
+    examplars -- file object for the exmplar file.
     snp_list -- ordered list of SNPs
     """
 
     
-    writer = csv.writer(exemplars, delimiter = ',')
+    writer = csv.writer(examplars, delimiter = ',')
 
     for line in ped_file:
         
@@ -135,7 +135,7 @@ def write_exemplars(ped_file, features, exemplars, snp_list):
         if phenotype == MISSING:
             continue
         
-        # process each line of the PED file in turn - output data to exemplar file
+        # process each line of the PED file in turn - output data to examplar file
         # and build up different alleles for each file
         currLine = currLine[6:]
         outline = []
@@ -155,7 +155,7 @@ def write_exemplars(ped_file, features, exemplars, snp_list):
         # write to file
         writer.writerow(outline)
      
-    exemplars.close()
+    examplars.close()
     return features
 
     
@@ -172,7 +172,7 @@ def printable_attributes(genotype_set):
 def write_arff_file(features, snp_list, arff, data):
     """ Writes the arff file in the format requried by weka. First creates
     the header section, which lists the attributes, and then writes the
-    data section, which is reproduced from the exemplar file, created
+    data section, which is reproduced from the examplar file, created
     earlier in the program.
 
     data -- the name of the dataset, used to correctly name the arff file
@@ -195,11 +195,11 @@ def write_arff_file(features, snp_list, arff, data):
     arff.write(DATA_STRING)
 
     ## WRITE DATA SECTION ##
-    exemplars = open(data + EXEMPLARS)
-    for line in exemplars:
+    examplars = open(data + examplarS)
+    for line in examplars:
         arff.write(line)
 
-    exemplars.close()
+    examplars.close()
     arff.close()
     
 def initialise_files(dataset_name):
@@ -207,8 +207,8 @@ def initialise_files(dataset_name):
     ped_file = open(dataset_name + PED)
     map_file = open(dataset_name + MAP)
     arff = open(dataset_name + ARFF, "w")
-    exemplars = open(dataset_name + EXEMPLARS,"w")
-    return (ped_file, map_file, arff, exemplars)
+    examplars = open(dataset_name + examplarS,"w")
+    return (ped_file, map_file, arff, examplars)
 
  
 def main():
@@ -217,27 +217,27 @@ def main():
     # open up the data files
     args = process_commands()
     data = args.dataset
-    ped_file, map_file, arff, exemplars = initialise_files(data)
+    ped_file, map_file, arff, examplars = initialise_files(data)
 
     if args.validate:
         validate_data = args.validate
-        vped_file, vmap_file, varff, vexemplars = initialise_files(validate_data)
+        vped_file, vmap_file, varff, vexamplars = initialise_files(validate_data)
 
     # build feature dictionary and snp_list
     
     features,snp_list = build_features(map_file)
     
     # write the examplars file(s)
-    print WRITING.format("exemplar", data),
-    features = write_exemplars(ped_file, features, exemplars, snp_list)
+    print WRITING.format("examplar", data),
+    features = write_examplars(ped_file, features, examplars, snp_list)
     print DONE
-    print CREATED.format(data, "exemplar")
+    print CREATED.format(data, "examplar")
     
     if args.validate:
-        print WRITING.format("exemplar", validate_data),
-        features = write_exemplars(vped_file, features, vexemplars, snp_list)
+        print WRITING.format("examplar", validate_data),
+        features = write_examplars(vped_file, features, vexamplars, snp_list)
         print DONE
-        print CREATED.format(validate_data, "exemplar")
+        print CREATED.format(validate_data, "examplar")
         
     # create the arff file
     print WRITING.format("arff", data),
