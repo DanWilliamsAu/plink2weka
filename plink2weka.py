@@ -59,8 +59,7 @@ an arff consistent with dataset"
 
 # UI strings
 WRITING = "Writing {0} file for {1}....."
-DONE = "Done!"
-CREATED = "{0}.{1} has been created"
+CREATED = "Done!\n{0}.{1} has been created\n"
 
 
 ### FUNCTIONS ###
@@ -230,23 +229,19 @@ def main():
     # write the examplars file(s)
     print WRITING.format("examplar", data),
     features = write_examplars(ped_file, features, examplars, snp_list)
-    print DONE
     print CREATED.format(data, "examplar")
     
     if args.validate:
         print WRITING.format("examplar", validate_data),
         features = write_examplars(vped_file, features, vexamplars, snp_list)
-        print DONE
         print CREATED.format(validate_data, "examplar")
         
     # create the arff file
     print WRITING.format("arff", data),
     write_arff_file(features, snp_list, arff, data)
-    print DONE
     print CREATED.format(data, "arff")
     if args.validate:
-        print WRITING.format("arff", data),
+        print WRITING.format("arff", validate_data),
         write_arff_file(features, snp_list, varff, validate_data)
-        print DONE
-        print CREATED.format(data,"arff")
+        print CREATED.format(validate_data,"arff")
 main()
