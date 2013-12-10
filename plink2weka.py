@@ -17,7 +17,7 @@
 #
 # Usage:
 #
-#
+# $ python plink2weka <trainingDataset> --validate <validationDataset>
 # Author:
 #
 # Daniel Williams (Department of Psychiatry, University of Melbourne)
@@ -30,15 +30,19 @@
 ##############################################################################
 
 import csv, sys, argparse
+from random import sample
 
 
 ### CONSTANTS ###
+
+# SNP missing code
+NO_GENO = '00'
 
 # some file extensions
 ARFF = '.arff'
 MAP = '.map'
 PED = '.ped'
-examplarS = '.examplars'
+EXAMPLARS = '.examplars'
 
 # affection status (plink defaults)
 UNAFFECTED = '1'
@@ -105,7 +109,7 @@ def build_features(map_file):
     
     for line in map_file:
         currSNP = line.split()[1]
-        feature_dict[currSNP] = set(['00'])
+        feature_dict[currSNP] = set([])
         snp_list.append(currSNP)
 
     return feature_dict, snp_list
@@ -157,6 +161,45 @@ def write_examplars(ped_file, features, examplars, snp_list):
     examplars.close()
     return features
 
+def remove_missing_genotypes(data, snp_list, features):
+    """ Remove missing genotype and replace with a random SNP from selection of SNPs
+    already seen 
+    
+    nb this function _reaally_ slows down the runtime.  Look into improving it.
+    (could probably improve everything using numpy)"""
+
+    # initialise files and csv objects
+    examplarfile = open(data + EXAMPLARS)
+    reader = csv.reader(examplarfile)
+    noMissingExamplars = open(data + '.nomissing' + EXAMPLARS, 'w')	
+
+    # process examplar file
+    for ind in reader:
+        i = 0
+
+        for SNP in ind[:-1]:
+            # process each SNP individually
+
+            # pop out '00' from the feature dictionary
+            try:
+                snp_list[i]
+                features[snp_list[i]].remove(NO_GENO)
+            except KeyError:
+                pass
+
+            # write the SNPs, randomly selecting something to replace '00'
+            if SNP == NO_GENO:         
+                noMissingExamplars.write((sample(features[snp_list[i]],1)[0]+','))
+            else:
+                noMissingExamplars.write(SNP+',')
+            i += 1
+
+        # add phenotype
+        noMissingExamplars.write(ind[-1]+'\n')
+
+    # close files
+    noMissingExamplars.close()
+    examplarfile.close()
     
 def printable_attributes(genotype_set):
     """ takes a set and returns the contents of the set as a string,
@@ -166,7 +209,6 @@ def printable_attributes(genotype_set):
     for item in genotype_set:
         out += item+','
     return out[:-1]
-
 
 def write_arff_file(features, snp_list, arff, data):
     """ Writes the arff file in the format requried by weka. First creates
@@ -194,7 +236,7 @@ def write_arff_file(features, snp_list, arff, data):
     arff.write(DATA_STRING)
 
     ## WRITE DATA SECTION ##
-    examplars = open(data + examplarS)
+    examplars = open(data + '.nomissing' + EXAMPLARS)
     for line in examplars:
         arff.write(line)
 
@@ -206,7 +248,7 @@ def initialise_files(dataset_name):
     ped_file = open(dataset_name + PED)
     map_file = open(dataset_name + MAP)
     arff = open(dataset_name + ARFF, "w")
-    examplars = open(dataset_name + examplarS,"w")
+    examplars = open(dataset_name + EXAMPLARS,"w")
     return (ped_file, map_file, arff, examplars)
 
  
@@ -223,19 +265,25 @@ def main():
         vped_file, vmap_file, varff, vexamplars = initialise_files(validate_data)
 
     # build feature dictionary and snp_list
-    
+    print "Building feature list...",
     features,snp_list = build_features(map_file)
-    
+    print "Done!"
+
     # write the examplars file(s)
     print WRITING.format("examplar", data),
     features = write_examplars(ped_file, features, examplars, snp_list)
     print CREATED.format(data, "examplar")
-    
     if args.validate:
         print WRITING.format("examplar", validate_data),
         features = write_examplars(vped_file, features, vexamplars, snp_list)
         print CREATED.format(validate_data, "examplar")
-        
+     
+    # remove missing genotype data
+    print "Removing missing genotype data...",
+    remove_missing_genotypes(data, snp_list, features)
+    print "Done!"
+    print
+
     # create the arff file
     print WRITING.format("arff", data),
     write_arff_file(features, snp_list, arff, data)
